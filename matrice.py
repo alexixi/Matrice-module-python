@@ -26,6 +26,11 @@ test_matrice_3x3 = [
     [4, 5, 6],
     [7, 8, 9]
 ]
+test_matrice_3x3_fraction = [
+    [1, 1, 3],
+    [2, Fraction(3, 13), 6],
+    [11, 6.2, 9]
+]
 
 test_matrice_triang_sup = [
     [1, 1, 3],
@@ -52,8 +57,21 @@ test_matrice_2x2 = [
 MatriceType = list[list[int | float | Fraction]] | list[list[int | float]] | list[list[int | Fraction]] | list[list[float | Fraction]] | list[list[int]] | list[list[float]] | list[list[Fraction]]
 
 def affiche_matrice(matrice: MatriceType) -> None:
+    """Print proprement la matrice"""
     print('\n'.join('  '.join(str(e) for e in l) for l in matrice))
 
+def simplify_type(number: int | float | Fraction) -> int | float | Fraction:
+    """
+    Simplifie le type du nombre en int en cas de simplification possible, cas des Fraction(0, x), Fraction(x, 1) et tout float entier (de la forme 12.0)
+    """
+    if isinstance(number, Fraction):
+        if number.numerator == 0:
+            return 0
+        if number.denominator == 1:
+            return number.numerator
+    elif math.floor(number) == number:
+        return math.floor(number)
+    return number
 
 def create_zero_matrice(n: int, m: int) -> list[list[int]]:
     """
@@ -141,25 +159,28 @@ def taille_matrice(matrice: MatriceType) -> tuple[int, int]:
         raise ValueError("La matrice n'est pas valide")
     return (len(matrice), len(matrice[0]))
 
-def scalaire_product(matrice: MatriceType, number: float) -> MatriceType:
-    return [[e * number for e in l] for l in matrice]
+def scalaire_product(matrice: MatriceType, number: int | float | Fraction) -> MatriceType:
+    return [[simplify_type(e * number) for e in l] for l in matrice]
 
 def sum_matrice(matrice_1: MatriceType, matrice_2: MatriceType) -> MatriceType:
     n, m = taille_matrice(matrice_1)
     if (n, m) != taille_matrice(matrice_2):
         raise ValueError("Les deux matrices n'ont pas la même taille")
-    return [[matrice_1[i][j] + matrice_2[i][j] for j in range(m)] for i in range(n)]
+    return [[simplify_type(matrice_1[i][j] + matrice_2[i][j]) for j in range(m)] for i in range(n)]
 
 def matrice_product(matrice_1: MatriceType, matrice_2: MatriceType) -> MatriceType:
     n, p = taille_matrice(matrice_1)
     p2, m = taille_matrice(matrice_1)
     if p2 != p:
         raise ValueError("Les matrices ne peuvent pas être multipliés")
-    return [[sum(matrice_1[i][k] * matrice_2[k][j] for k in range(p)) for j in range(m)] for i in range(n)]
+    return [[simplify_type(sum(matrice_1[i][k] * matrice_2[k][j] for k in range(p))) for j in range(m)] for i in range(n)]
 
 affiche_matrice(matrice_product([[Fraction(1, 2), 2], [3, 4]], [[2, 3], [5, 7]]))
 
 def transpose(matrice: MatriceType) -> MatriceType:
+    """
+    Renvoie la matrice transposée
+    """
     n, m = taille_matrice(matrice)
     t = create_zero_matrice(m, n)
     for i in range(n):
@@ -167,14 +188,14 @@ def transpose(matrice: MatriceType) -> MatriceType:
             t[j][i] = matrice[i][j]
     return t
 
-def trace(matrice: MatriceType) -> float:
+def trace(matrice: MatriceType) -> int | float | Fraction:
     """
     Calcule la trace de la matrice, soit la somme des éléments de la diagonale principale
     """
     return sum(matrice[i][i] for i in range(len(matrice)))
 
 
-def det_2x2(matrice: MatriceType) -> float:
+def det_2x2(matrice: MatriceType) -> int | float | Fraction:
     """
     Calcule le déterminant pour une matrice de taille 2x2
 
@@ -204,7 +225,7 @@ def det_2x2(matrice: MatriceType) -> float:
     return matrice[0][0] * matrice[1][1] - matrice[1][0] * matrice[0][1]
 
 
-def det_3x3_sarrus(matrice: MatriceType) -> float:
+def det_3x3_sarrus(matrice: MatriceType) -> int | float | Fraction:
     """
     Calcule le déterminant pour une matrice de taille 3x3 en utilisant la règle de Sarrus
 
@@ -333,7 +354,7 @@ def is_matrice_triangulaire_inf(matrice: MatriceType) -> bool:
                 return False
     return True
 
-def det_triangulaire(matrice: MatriceType) -> float:
+def det_triangulaire(matrice: MatriceType) -> int | float | Fraction:
     """
     Calcule le déterminant pour une matrice diagonale, triangulaire inférieur ou triangulaire supérieure, c'est à dire le produit des éléments de la diagonale principale.
     Ne fonctionne que pour une matrice triangulaire !
@@ -400,7 +421,7 @@ def suppr_ligne_colonne(matrice: MatriceType, i: int, j: int) -> MatriceType:
     return [matrice[indice_ligne][:j-1] + matrice[indice_ligne][j:] for indice_ligne in range(m) if indice_ligne != i-1]
 
 
-def det(matrice: MatriceType) -> float:
+def det(matrice: MatriceType) -> int | float | Fraction:
     """
     Calcule le déterminant d'une matrice carré de taille nxn quelconque en développant selon la colonne 1
     Fonction récursive
@@ -459,7 +480,6 @@ def commatrice(matrice: MatriceType) -> MatriceType:
     return com
 
 def inverse(matrice: MatriceType) -> MatriceType:
-    n, m = taille_matrice(matrice)
     determinant = det(matrice)
     if determinant == 0:
         raise ValueError("Matrice non inversible !")
@@ -467,8 +487,7 @@ def inverse(matrice: MatriceType) -> MatriceType:
 
 # print(inverse(test_matrice_2x2))
 affiche_matrice(matrice_product(inverse(test_matrice_5x5), test_matrice_5x5))
-    
-
+inverse(test_matrice_3x3_fraction)
 
 if __name__ == "__main__":
     import doctest
