@@ -7,16 +7,19 @@ Exemple :
     matrice = Matrice([[5, 6, 1], [3, 6, 9], [1, 1, 1]])
 """
 
-from typing import Union
+from typing import Union, Iterator
+from decimal import Decimal
 from fractions import Fraction
 import random
 
-def simplify_number_type(number: int | float | Fraction) -> int | Fraction:
+def change_number_type(number: int | float | Decimal | str | Fraction) -> int | Fraction:
     """
-    Converti un float en Fraction
+    Converti un float ou un str en Fraction
     Converti une fraction en int dans le cas des Fraction(0, x) et Fraction(x, 1)
     """
-    if isinstance(number, float):
+    if isinstance(number, (str, Decimal)):
+        number = Fraction(number)
+    elif isinstance(number, float):
         number = Fraction(str(number))
     if isinstance(number, Fraction):
         if number.numerator == 0:
@@ -27,10 +30,10 @@ def simplify_number_type(number: int | float | Fraction) -> int | Fraction:
 
 
 class Matrice:
-    def __init__(self, matrice: list[list[int | float | Fraction]]) -> None:
+    def __init__(self, matrice: list[list[int | float | Decimal | str | Fraction]]) -> None:
         if not isinstance(matrice, list) or not all((isinstance(l, list) and len(l) == len(matrice[0])) for l in matrice):
-            raise ValueError("La matrice n'est pas valide.\nType accepté pour la création : list[list[int | float | Fraction]]\nLes sous listes doivent toutes avoir le même nombre déléments")
-        self.__tableau = [[simplify_number_type(e) for e in l] for l in matrice]
+            raise ValueError("La matrice n'est pas valide.\nType accepté pour la création : list[list[int | float | Decimal | str | Fraction]]\nLes sous listes doivent toutes avoir le même nombre déléments")
+        self.__tableau = [[change_number_type(e) for e in l] for l in matrice]
 
     @property
     def size(self) -> tuple[int, int]:
@@ -62,11 +65,11 @@ class Matrice:
         """Renvoie n"""
         return self.n
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[list]:
         """Renvoie l'objet iter() du tableau de valeurs"""
         return iter(self.__tableau)
 
-    def __reversed__(self):
+    def __reversed__(self) -> Iterator[list]:
         """Renvoie l'objet reversed() du tableau de valeurs"""
         return reversed(self.__tableau)
 
@@ -77,8 +80,8 @@ class Matrice:
     def __str__(self) -> str:
         """Renvoie une chaîne de caractères lisible pour un humain pour représenter la matrice"""
         max_width = max(len(str(e)) for l in self.__tableau for e in l)
-        return '\n'.join(''.join(f"{' ' if e >= 0 else ''}{str(e):{max_width}}{' ' if e < 0 else ''}" for e in l) for l in self.__tableau)
-    
+        return '\n'.join(' '.join(f"{' ' if e >= 0 else ''}{str(e):{max_width}}{' ' if e < 0 else ''}" for e in l) for l in self.__tableau)
+
     def __nonzero__(self) -> bool:
         """Renvoie True si la matrice est non nulle, False sinon"""
         return not self.is_nulle()
@@ -100,7 +103,7 @@ class Matrice:
             raise ValueError("Vous ne pouvez ajouter que deux matrices de même taille ensemble")
         if self.size != matrice.size:
             raise ValueError("Vous ne pouvez ajouter que deux matrices de même taille ensemble")
-        return Matrice([[simplify_number_type(self[i][j] + matrice[i][j]) for j in range(self.m)] for i in range(self.n)])
+        return Matrice([[change_number_type(self.__tableau[i][j] + matrice[i][j]) for j in range(self.m)] for i in range(self.n)])
     
     def __radd__(self, matrice: 'Matrice') -> 'Matrice':
         """Addition de deux matrices"""
@@ -112,37 +115,38 @@ class Matrice:
             raise ValueError("Vous ne pouvez soustraire que deux matrices de même taille ensemble")
         if self.size != matrice.size:
             raise ValueError("Vous ne pouvez soustraire que deux matrices de même taille ensemble")
-        return Matrice([[simplify_number_type(self[i][j] - matrice[i][j]) for j in range(self.m)] for i in range(self.n)])
+        return Matrice([[change_number_type(self.__tableau[i][j] - matrice[i][j]) for j in range(self.m)] for i in range(self.n)])
     
     def __rsub__(self, matrice: 'Matrice') -> 'Matrice':
         """Soustraction de deux matrices"""
         return self.__sub__(matrice)
 
-    def __mul__(self, factor: Union['Matrice', int, float, Fraction]) -> 'Matrice':
+    def __mul__(self, factor: Union['Matrice', int, float, Decimal, str, Fraction]) -> 'Matrice':
         """Multiplication de la matrice par un scalaire ou une autre matrice"""
         if isinstance(factor, Matrice):
             n, p = self.size
             p2, m = factor.size
             if p2 != p:
                 raise ValueError("Les matrices ne peuvent pas être multipliés")
-            return Matrice([[simplify_number_type(sum(self[i][k] * factor[k][j] for k in range(p))) for j in range(m)] for i in range(n)])
-        factor = simplify_number_type(factor)
-        return Matrice([[simplify_number_type(e * factor) for e in l] for l in self])
+            return Matrice([[change_number_type(sum(self.__tableau[i][k] * factor[k][j] for k in range(p))) for j in range(m)] for i in range(n)])
+        factor = change_number_type(factor)
+        return Matrice([[change_number_type(e * factor) for e in l] for l in self])
 
-    def __rmul__(self, factor: Union['Matrice', int, float, Fraction]) -> 'Matrice':
+    def __rmul__(self, factor: Union['Matrice', int, float, Decimal, str, Fraction]) -> 'Matrice':
         """Multiplication de la matrice par un scalaire ou une autre matrice"""
         if isinstance(factor, Matrice):
             return factor.__mul__(self)
         return self.__mul__(factor)
 
-    def __pow__(self, factor: int | float | Fraction) -> 'Matrice':
+    def __pow__(self, factor: int | float | Decimal | str | Fraction) -> 'Matrice':
         """
-        Calcul la matrice à la puissance factor. factor doit être un entier (il peut néanmoins être de type float (ex: 3.0) ou de type Fraction (ex: Fraction(3, 1))).
-        Si la matrice est diagonale, calcul directement la puissance factor, sinon calcul par recurrence chaque multiplication de la matrice avec elle même
+        Calcul la matrice à la puissance factor. factor doit être un entier (il peut néanmoins être de type float (ex: 3.0), de type Decimal (ex: Decimal('3')), de type str (ex: '3') et de type Fraction (ex: Fraction(3, 1))).
+        Si la matrice est diagonale, calcul directement la puissance factor, sinon calcul par recurrence chaque multiplication de la matrice avec elle même.
+        Si la puissance est négative, inverse la matrice puis calcul sa puissance -factor.
         """
         if not self.is_square:
             raise ValueError('La matrice doit être carrée pour être élevée à une puissance')
-        factor = simplify_number_type(factor)
+        factor = change_number_type(factor)
         if not isinstance(factor, int):
             raise TypeError("La puissance doit être un nombre entier")
         if factor == 0:
@@ -158,7 +162,7 @@ class Matrice:
             result = result * self.copy()
         return result
     
-    def __truediv__(self, denominator: Union['Matrice', int, float, Fraction]) -> 'Matrice':
+    def __truediv__(self, denominator: Union['Matrice', int, float, Decimal, str, Fraction]) -> 'Matrice':
         """
         Équivalent à la multiplication par l'inverse
         Exemples: 
@@ -167,10 +171,10 @@ class Matrice:
         """
         if isinstance(denominator, Matrice):
             return self.__mul__(denominator.inverse())
-        denominator = simplify_number_type(denominator)
-        return Matrice([[simplify_number_type(Fraction(e, denominator)) for e in l] for l in self])
+        denominator = change_number_type(denominator)
+        return Matrice([[change_number_type(Fraction(e, denominator)) for e in l] for l in self])
     
-    def __rtruediv__(self, numerator: Union['Matrice', int, float, Fraction]) -> 'Matrice':
+    def __rtruediv__(self, numerator: Union['Matrice', int, float, Decimal, str, Fraction]) -> 'Matrice':
         """
         Équivalent à la multiplication par l'inverse
         Exemples: 
@@ -215,10 +219,10 @@ class Matrice:
 
     def trace(self) -> int | Fraction:
         """Calcule la trace de la matrice, soit la somme des éléments de la diagonale principale"""
-        return simplify_number_type(sum(self.__tableau[i][i] for i in range(self.n)))
+        return change_number_type(sum(self.__tableau[i][i] for i in range(self.n)))
 
     def transpose(self) -> 'Matrice':
-        """Renvoi la transposée de la matrice, i.e. met les lignes en colonnes"""
+        """Renvoie la transposée de la matrice, i.e. met les lignes en colonnes"""
         t = create_zero_matrice(self.m, self.n)
         for i in range(self.n):
             for j in range(self.m):
@@ -231,7 +235,6 @@ class Matrice:
         Fonction sans effet de bord (ne modifie pas la matrice d'origine)
 
         Args:
-            matrice (MatriceType): Liste de liste d'entiers représentant la matrice
             i (int): Ligne à supprimer (en langage naturel, correspond à l'indice i-1 de la liste)
             j (int): Colonne à supprimer (en langage naturel, correspond à l'indice j-1 de la liste)
 
@@ -258,10 +261,10 @@ class Matrice:
         Calcule le déterminant d'une matrice carré de taille nxn quelconque en développant selon la colonne 1
         Fonction récursive
         La règle de Sarrus est utilisée pour calculer les déterminant 3x3 (cas de base pour la récursivité) et ainsi gagner du temps de calcul pour les grandes matrices
-        Pour les cas spécifiques des déterminants de matrice 2x2 et 1x1 des méthodes directes sont utilisées
+        Pour les cas spécifiques des déterminants de matrices triangulaires, diagonales, avec (au moins) une ligne nulle ainsi que celles de taille 2x2 et 1x1 des méthodes directes sont utilisées
 
         Returns:
-            int: Le déterminant de la matrice
+            int | Fraction: Le déterminant de la matrice
         
         Raises:
             ValueError: La matrice n'est pas carré
@@ -271,10 +274,10 @@ class Matrice:
         if self.n == 1:
             return self.__tableau[0][0]
         if self.n == 2:
-            return simplify_number_type(self.__tableau[0][0] * self.__tableau[1][1] - self.__tableau[1][0] * self.__tableau[0][1])
+            return change_number_type(self.__tableau[0][0] * self.__tableau[1][1] - self.__tableau[1][0] * self.__tableau[0][1])
         if self.n == 3:
             # règle de Sarrus
-            return simplify_number_type(
+            return change_number_type(
                 + self.__tableau[0][0] * self.__tableau[1][1] * self.__tableau[2][2]
                 + self.__tableau[0][1] * self.__tableau[1][2] * self.__tableau[2][0]
                 + self.__tableau[1][0] * self.__tableau[2][1] * self.__tableau[0][2]
@@ -282,13 +285,13 @@ class Matrice:
                 - self.__tableau[2][1] * self.__tableau[1][2] * self.__tableau[0][0]
                 - self.__tableau[1][0] * self.__tableau[0][1] * self.__tableau[2][2]
             )
-        if self.is_nulle():
-            return 0
         if self.is_triangulaire_inf() or self.is_triangulaire_sup():
             product = 1
             for i in range(len(self)):
                 product *= self.__tableau[i][i]
-            return simplify_number_type(product)
+            return change_number_type(product)
+        if any(all(e == 0  for e in l) for l in self.__tableau):
+            return 0
         j = 1
         return sum(self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).det() * (-1)**(i+j) for i in range(1, self.n+1))
     
@@ -301,10 +304,12 @@ class Matrice:
         return com
 
     def inverse(self) -> 'Matrice':
-        """Inverse la matrice en utilisant la méthode de la comatrice. Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
+        """Inverse la matrice en utilisant la méthode de la comatrice (ou par une méthode directe pour les matrices 2x2). Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
         determinant = self.det()
         if determinant == 0:
             raise ValueError("Matrice non inversible !")
+        if self.size == (2, 2):
+            return Matrice([[self.__tableau[1][1], -self.__tableau[0][1]], [-self.__tableau[1][0], self.__tableau[0][0]]]) * Fraction(1, determinant)
         return self.comatrice().transpose() * Fraction(1, determinant)
 
 
@@ -347,6 +352,7 @@ def create_random_matrice(n: int, m: int, nb_min: int = 1, nb_max: int = 9) -> M
         Matrice: Une matrice nxm remplie de nombres aléatoire entre nb_min et nb_max
     """
     return Matrice([[random.randint(nb_min, nb_max) for _ in range(m)] for _ in range(n)])
+
 
 if __name__ == "__main__":
     matrice = Matrice([[-1, 2], [3, 4]])
