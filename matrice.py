@@ -292,8 +292,8 @@ class Matrice:
         j = 1
         return sum(self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).det() * (-1)**(i+j) for i in range(1, self.n+1))
     
-    def commatrice(self) -> 'Matrice':
-        """Renvoi la commatrice de la matrice"""
+    def comatrice(self) -> 'Matrice':
+        """Renvoi la comatrice de la matrice"""
         com = create_zero_matrice(self.n, self.m)
         for i in range(1, self.n+1):
             for j in range(1, self.m+1):
@@ -301,11 +301,11 @@ class Matrice:
         return com
 
     def inverse(self) -> 'Matrice':
-        """Inverse la matrice en utilisant la méthode de la commatrice. Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
+        """Inverse la matrice en utilisant la méthode de la comatrice. Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
         determinant = self.det()
         if determinant == 0:
             raise ValueError("Matrice non inversible !")
-        return self.commatrice().transpose() * Fraction(1, determinant)
+        return self.comatrice().transpose() * Fraction(1, determinant)
 
 
 def create_zero_matrice(n: int, m: int) -> Matrice:

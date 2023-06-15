@@ -471,7 +471,7 @@ def det(matrice: MatriceType) -> int | float | Fraction:
     j = 1
     return sum(matrice[i-1][j-1] * det(suppr_ligne_colonne(matrice, i, j)) * (-1)**(i+j) for i in range(1, n+1))
 
-def commatrice(matrice: MatriceType) -> MatriceType:
+def comatrice(matrice: MatriceType) -> MatriceType:
     n, m = taille_matrice(matrice)
     com = create_zero_matrice(n, m)
     for i in range(1, n+1):
@@ -483,7 +483,7 @@ def inverse(matrice: MatriceType) -> MatriceType:
     determinant = det(matrice)
     if determinant == 0:
         raise ValueError("Matrice non inversible !")
-    return scalaire_product(transpose(commatrice(matrice)), Fraction(1, det(matrice)))
+    return scalaire_product(transpose(comatrice(matrice)), Fraction(1, det(matrice)))
 
 # print(inverse(test_matrice_2x2))
 affiche_matrice(matrice_product(inverse(test_matrice_5x5), test_matrice_5x5))
