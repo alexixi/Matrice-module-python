@@ -298,8 +298,8 @@ class Matrice:
             return change_number_type(product)
         if any(all(e == 0  for e in l) for l in self.__tableau):
             return 0
-        # if any(all(self.__tableau[j][i] == 0 for j in range(len(self.__tableau))) for i in range(len(self.__tableau)))) != len(self.__tableau):
-        #     return 0
+        if any(all(self.__tableau[j][i] == 0 for j in range(len(self.__tableau))) for i in range(len(self.__tableau))):
+            return 0
         if len(set(tuple(l) for l in self.__tableau)) != len(self.__tableau):
             return 0
         if len(set(tuple(self.__tableau[j][i] for j in range(len(self.__tableau))) for i in range(len(self.__tableau)))) != len(self.__tableau):
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     matrice = Matrice([[-1, 2], [3, 4]])
     matrice2 = Matrice([[1.5, 6, 1], [3, 6, 9], [1, 1, 1]])
     diag = Matrice([[5, 0, 0], [0, Fraction(1, 6), 0], [0, 0, 22]])
-    matrice10 = Matrice([[3, 7, 7, 6, 1, 9, 5, 9, 8, 3], [3, 5, 2, 1, 6, 3, 2, 1, 3, 3], [3, 5, 7, 9, 14, 3, 2, 1, 3, 3], [3, 7, 5, 7, 7, 7, 4, 5, 3, 3], [3, 8, 6, 4, 4, 9, 2, 3, 8, 3], [3, 5, 4, 7, 3, 9, 3, 3, 6, 3], [3, 7, 2, 5, 3, 5, 6, 2, 8, 3], [3, 3, 9, 7, 9, 2, 3, 7, 6, 3], [3, 1, 6, 4, 9, 8, 4, 4, 6, 3], [3, 9, 7, 7, 3, 7, 2, 9, 8, 3]])
+    matrice10 = Matrice([[6, 0, 7, 6, 1, 9, 5, 9, 8, 3], [3, 0, 2, 1, 6, 3, 2, 1, 3, 12], [3, 0, 7, 9, 14, 3, 2, 1, 3, 9], [3, 0, 5, 7, 7, 7, 4, 5, 3, 3], [3, 0, 6, 4, 4, 9, 2, 3, 8, 1], [145, 0, 4, 7, 3, 9, 3, 3, 6, 3], [3, 0, 2, 5, 3, 5, 6, 2, 8, 3], [3, 0, 9, 7, 9, 2, 3, 7, 6, 3], [11, 0, 6, 4, 9, 8, 4, 4, 6, 3], [0, 0, 22, 7, 3, 7, 2, 9, 8, 46]])
     troll = create_random_matrice(3, 3)
     trolll = create_random_matrice(3, 3)
     idd = create_id_matrice(3)
