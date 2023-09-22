@@ -7,7 +7,7 @@ Exemple :
     matrice = Matrice([[5, 6, 1], [3, 6, 9], [1, 1, 1]])
 """
 
-from typing import Union, Iterator
+from typing import Union, Iterator, Iterable
 from decimal import Decimal
 from fractions import Fraction
 import random
@@ -56,6 +56,12 @@ class Matrice:
 
     def __getitem__(self, indice: int) -> list[int | Fraction]:
         return self.__tableau[indice]
+
+    def __setitem__(self, indice: int, value: Iterable[int | float | Decimal | str | Fraction]) -> None:
+        list_value = [change_number_type(e) for e in value]
+        if len(list_value) != self.m:
+            raise ValueError("La ligne n'est pas de la bonne longueure !")
+        self.__tableau[indice] = list_value
     
     def __eq__(self, attr) -> bool:
         """Deux matrices sont égales si leur tableau de valeurs sont égaux"""
@@ -292,6 +298,12 @@ class Matrice:
             return change_number_type(product)
         if any(all(e == 0  for e in l) for l in self.__tableau):
             return 0
+        # if any(all(self.__tableau[j][i] == 0 for j in range(len(self.__tableau))) for i in range(len(self.__tableau)))) != len(self.__tableau):
+        #     return 0
+        if len(set(tuple(l) for l in self.__tableau)) != len(self.__tableau):
+            return 0
+        if len(set(tuple(self.__tableau[j][i] for j in range(len(self.__tableau))) for i in range(len(self.__tableau)))) != len(self.__tableau):
+            return 0
         j = 1
         return sum(self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).det() * (-1)**(i+j) for i in range(1, self.n+1))
     
@@ -303,7 +315,7 @@ class Matrice:
                 com[i-1][j-1] = (-1)**(i+j) * self.matrice_extraite(i, j).det()
         return com
 
-    def inverse(self) -> 'Matrice':
+    def inverse_comatrice(self) -> 'Matrice':
         """Inverse la matrice en utilisant la méthode de la comatrice (ou par une méthode directe pour les matrices 2x2). Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
         determinant = self.det()
         if determinant == 0:
@@ -312,6 +324,49 @@ class Matrice:
             return Matrice([[self.__tableau[1][1], -self.__tableau[0][1]], [-self.__tableau[1][0], self.__tableau[0][0]]]) * Fraction(1, determinant)
         return self.comatrice().transpose() * Fraction(1, determinant)
 
+
+    def inverse_pivot(self) -> 'Matrice':
+        """Inverse la matrice en utilisant la méthode du pivot (ou par une méthode directe pour les matrices 2x2). Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
+        if self.n != self.m:
+            raise ValueError("La matrice doit être carrée pour pouvoir être inversée")
+
+        if self.size == (2, 2):
+            return Matrice([[self.__tableau[1][1], -self.__tableau[0][1]], [-self.__tableau[1][0], self.__tableau[0][0]]]) * Fraction(1, self.det()) 
+
+        matrice_copy = self.copy()
+        matrice_id = create_id_matrice(self.n)
+
+        # Appliquer la méthode du pivot
+        for i in range(self.n):
+            pivot = matrice_copy[i][i]
+            if pivot == 0:
+                # Trouver une ligne non nulle pour échanger
+                for k in range(i + 1, self.n):
+                    if matrice_copy[k][i] != 0:
+                        matrice_copy[i], matrice_copy[k] = matrice_copy[k], matrice_copy[i]
+                        matrice_id[i], matrice_id[k] = matrice_id[k], matrice_id[i]
+                        pivot = matrice_copy[i][i]
+                        break
+            if pivot == 0:
+                raise ValueError("La matrice est singulière et ne peut pas être inversée")
+
+            # Diviser la ligne par le pivot
+            for j in range(self.m):
+                matrice_copy[i][j] = Fraction(matrice_copy[i][j], pivot)
+                matrice_id[i][j] = Fraction(matrice_id[i][j], pivot)
+
+            # Soustraire les autres lignes
+            for k in range(self.n):
+                if k != i:
+                    factor = matrice_copy[k][i]
+                    for j in range(self.m):
+                        matrice_copy[k][j] -= factor * matrice_copy[i][j]
+                        matrice_id[k][j] -= factor * matrice_id[i][j]
+        return matrice_id
+    
+    def inverse(self) -> 'Matrice':
+        """Inverse la matrice en utilisant la méthode du pivot (ou par une méthode directe pour les matrices 2x2). Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
+        return self.inverse_pivot()
 
 def create_zero_matrice(n: int, m: int) -> Matrice:
     """
@@ -358,11 +413,13 @@ if __name__ == "__main__":
     matrice = Matrice([[-1, 2], [3, 4]])
     matrice2 = Matrice([[1.5, 6, 1], [3, 6, 9], [1, 1, 1]])
     diag = Matrice([[5, 0, 0], [0, Fraction(1, 6), 0], [0, 0, 22]])
+    matrice10 = Matrice([[3, 7, 7, 6, 1, 9, 5, 9, 8, 3], [3, 5, 2, 1, 6, 3, 2, 1, 3, 3], [3, 5, 7, 9, 14, 3, 2, 1, 3, 3], [3, 7, 5, 7, 7, 7, 4, 5, 3, 3], [3, 8, 6, 4, 4, 9, 2, 3, 8, 3], [3, 5, 4, 7, 3, 9, 3, 3, 6, 3], [3, 7, 2, 5, 3, 5, 6, 2, 8, 3], [3, 3, 9, 7, 9, 2, 3, 7, 6, 3], [3, 1, 6, 4, 9, 8, 4, 4, 6, 3], [3, 9, 7, 7, 3, 7, 2, 9, 8, 3]])
     troll = create_random_matrice(3, 3)
     trolll = create_random_matrice(3, 3)
     idd = create_id_matrice(3)
-    print(troll*idd == troll)
-    print(matrice2.det())
-    print(1/matrice2)
-    print(matrice**-1)
-    print(matrice)
+    print(matrice10.det())
+    # print(troll*idd == troll)
+    # print(matrice2.det())
+    # print(1/matrice2)
+    # print(matrice**-1)
+    # print(matrice)
