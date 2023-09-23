@@ -42,12 +42,12 @@ class Matrice:
     @property
     def n(self) -> int:
         """Nombre de lignes"""
-        return self.size[0]
+        return len(self.__tableau)
 
     @property
     def m(self) -> int:
         """Nombre de colonnes"""
-        return self.size[1]
+        return len(self.__tableau[0])
     
     @property
     def is_square(self) -> bool:
@@ -261,13 +261,14 @@ class Matrice:
         if j < 1 or j > self.m:
             raise ValueError("Le numéro de colonne à supprimer n'est pas dans la matrice")
         return Matrice([self.__tableau[indice_ligne][:j-1] + self.__tableau[indice_ligne][j:] for indice_ligne in range(self.m) if indice_ligne != i-1])
-    
+
     def det(self) -> int | Fraction:
         """
         Calcule le déterminant d'une matrice carré de taille nxn quelconque en développant selon la colonne 1
         Fonction récursive
         La règle de Sarrus est utilisée pour calculer les déterminant 3x3 (cas de base pour la récursivité) et ainsi gagner du temps de calcul pour les grandes matrices
-        Pour les cas spécifiques des déterminants de matrices triangulaires, diagonales, avec (au moins) une ligne nulle ainsi que celles de taille 2x2 et 1x1 des méthodes directes sont utilisées
+        Pour les cas spécifiques des déterminants de matrices triangulaires, diagonales, avec (au moins) une ligne/colonne nulle, celles avec deux lignes/colonnes identiques, ainsi que celles de taille 2x2 et 1x1 des méthodes directes sont utilisées
+        La fonction va rechercher la ligne ou colonne avec le plus de 0 pour faire le développement et ainsi simplifier les calculs
 
         Returns:
             int | Fraction: Le déterminant de la matrice
@@ -296,19 +297,127 @@ class Matrice:
             for i in range(len(self)):
                 product *= self.__tableau[i][i]
             return change_number_type(product)
-        if any(all(e == 0  for e in l) for l in self.__tableau):
-            return 0
-        if any(all(self.__tableau[j][i] == 0 for j in range(len(self.__tableau))) for i in range(len(self.__tableau))):
-            return 0
+        developement_line = 1
+        developement_colomn = 1
+        line_max_0_count = 0
+        colomn_max_0_count = 0
+        for i in range(len(self.__tableau)):
+            line_0_count = sum(e == 0 for e in self.__tableau[i])
+            if line_0_count > line_max_0_count:
+                if line_0_count == len(self.__tableau):
+                    return 0
+                line_max_0_count = line_0_count
+                developement_line = i + 1
+        for j in range(len(self.__tableau)):
+            colomn_0_count = sum(self.__tableau[i][j] == 0 for i in range(len(self.__tableau)))
+            if colomn_0_count > colomn_max_0_count:
+                if colomn_0_count == len(self.__tableau):
+                    return 0
+                colomn_max_0_count = colomn_0_count
+                developement_colomn = j + 1
         if len(set(tuple(l) for l in self.__tableau)) != len(self.__tableau):
             return 0
         if len(set(tuple(self.__tableau[j][i] for j in range(len(self.__tableau))) for i in range(len(self.__tableau)))) != len(self.__tableau):
             return 0
-        j = 1
-        return sum(self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).det() * (-1)**(i+j) for i in range(1, self.n+1))
-    
+        if line_max_0_count > colomn_max_0_count:
+            i = developement_line
+            return sum(0 if self.__tableau[i-1][j-1] == 0 else self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).det() * (-1)**(i+j) for j in range(1, self.n+1))
+        else:
+            j = developement_colomn
+            return sum(0 if self.__tableau[i-1][j-1] == 0 else self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).det() * (-1)**(i+j) for i in range(1, self.n+1))
+
+
+    def new_det(self) -> int | Fraction:
+        """
+        [!] Cette fonction est en phase de test
+        Par rapport à Matrice.det(), cette fonction regarde en plus avant de calculer le déterminant si une ligne/colonne est un multiple d'une autre (dans ce cas le déterminant vaut 0)
+        Cela rajoute des calculs ce qui fait que dans la plupart des cas la fonction Matrice.det() est plus rapide     
+
+        Calcule le déterminant d'une matrice carré de taille nxn quelconque en développant selon la colonne 1
+        Fonction récursive
+        La règle de Sarrus est utilisée pour calculer les déterminant 3x3 (cas de base pour la récursivité) et ainsi gagner du temps de calcul pour les grandes matrices
+        Pour les cas spécifiques des déterminants de matrices triangulaires, diagonales, avec (au moins) une ligne/colonne nulle, celles avec deux lignes/colonnes identiques, ainsi que celles de taille 2x2 et 1x1 des méthodes directes sont utilisées
+        La fonction va rechercher la ligne ou colonne avec le plus de 0 pour faire le développement et ainsi simplifier les calculs
+
+        Returns:
+            int | Fraction: Le déterminant de la matrice
+        
+        Raises:
+            ValueError: La matrice n'est pas carré
+        """
+        if not self.is_square:
+            raise ValueError("La matrice n'est pas carré")
+        if self.n == 1:
+            return self.__tableau[0][0]
+        if self.n == 2:
+            return change_number_type(self.__tableau[0][0] * self.__tableau[1][1] - self.__tableau[1][0] * self.__tableau[0][1])
+        if self.n == 3:
+            # règle de Sarrus
+            return change_number_type(
+                + self.__tableau[0][0] * self.__tableau[1][1] * self.__tableau[2][2]
+                + self.__tableau[0][1] * self.__tableau[1][2] * self.__tableau[2][0]
+                + self.__tableau[1][0] * self.__tableau[2][1] * self.__tableau[0][2]
+                - self.__tableau[2][0] * self.__tableau[1][1] * self.__tableau[0][2]
+                - self.__tableau[2][1] * self.__tableau[1][2] * self.__tableau[0][0]
+                - self.__tableau[1][0] * self.__tableau[0][1] * self.__tableau[2][2]
+            )
+        if self.is_triangulaire_inf() or self.is_triangulaire_sup():
+            product = 1
+            for i in range(len(self)):
+                product *= self.__tableau[i][i]
+            return change_number_type(product)
+        developement_line = 1
+        developement_colomn = 1
+        line_max_0_count = 0
+        colomn_max_0_count = 0
+        for i in range(len(self.__tableau)):
+            line_0_count = sum(e == 0 for e in self.__tableau[i])
+            if line_0_count > line_max_0_count:
+                if line_0_count == len(self.__tableau):
+                    return 0
+                line_max_0_count = line_0_count
+                developement_line = i + 1
+        for j in range(len(self.__tableau)):
+            colomn_0_count = sum(self.__tableau[i][j] == 0 for i in range(len(self.__tableau)))
+            if colomn_0_count > colomn_max_0_count:
+                if colomn_0_count == len(self.__tableau):
+                    return 0
+                colomn_max_0_count = colomn_0_count
+                developement_colomn = j + 1
+        for i in range(len(self.__tableau)-1):
+            for i_comp in range(i+1, len(self.__tableau)):
+                if self.__tableau[i][0] == 0 or self.__tableau[i_comp][0] == 0:
+                    continue
+                factor = Fraction(self.__tableau[i][0], self.__tableau[i_comp][0])
+                if all(
+                    True if (self.__tableau[i][j] == 0 and self.__tableau[i_comp][j] == 0)
+                    else False if self.__tableau[i][j] == 0 or self.__tableau[i_comp][j] == 0
+                    else factor == Fraction(self.__tableau[i][j], self.__tableau[i_comp][j])
+                    for j in range(1, len(self.__tableau))
+                ):
+                    return 0
+        for j in range(len(self.__tableau)-1):
+            for j_comp in range(j+1, len(self.__tableau)):
+                if self.__tableau[0][j] == 0 or self.__tableau[0][j_comp] == 0:
+                    continue
+                factor = Fraction(self.__tableau[0][j], self.__tableau[0][j_comp])
+                if all(
+                    True if (self.__tableau[i][j] == 0 and self.__tableau[i][j_comp] == 0)
+                    else False if self.__tableau[i][j] == 0 or self.__tableau[i][j_comp] == 0
+                    else factor == Fraction(self.__tableau[i][j], self.__tableau[i][j_comp])
+                    for i in range(1, len(self.__tableau))
+                ):
+                    return 0
+        if line_max_0_count > colomn_max_0_count:
+            i = developement_line
+            return sum(0 if self.__tableau[i-1][j-1] == 0 else self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).new_det() * (-1)**(i+j) for j in range(1, self.n+1))
+        else:
+            j = developement_colomn
+            return sum(0 if self.__tableau[i-1][j-1] == 0 else self.__tableau[i-1][j-1] * self.matrice_extraite(i, j).new_det() * (-1)**(i+j) for i in range(1, self.n+1))
+        
+
     def comatrice(self) -> 'Matrice':
-        """Renvoi la comatrice de la matrice"""
+        """Renvoi la comatrice de la matrice, c'est à dire la matrice des cofacteurs"""
         com = create_zero_matrice(self.n, self.m)
         for i in range(1, self.n+1):
             for j in range(1, self.m+1):
@@ -323,7 +432,6 @@ class Matrice:
         if self.size == (2, 2):
             return Matrice([[self.__tableau[1][1], -self.__tableau[0][1]], [-self.__tableau[1][0], self.__tableau[0][0]]]) * Fraction(1, determinant)
         return self.comatrice().transpose() * Fraction(1, determinant)
-
 
     def inverse_pivot(self) -> 'Matrice':
         """Inverse la matrice en utilisant la méthode du pivot (ou par une méthode directe pour les matrices 2x2). Pour être inversible la matrice doit être carré et avoir un déterminant non nul."""
@@ -393,7 +501,6 @@ def create_id_matrice(n: int) -> Matrice:
     """
     return Matrice([[1 if j == i else 0 for j in range(n)] for i in range(n)])
 
-
 def create_random_matrice(n: int, m: int, nb_min: int = 1, nb_max: int = 9) -> Matrice:
     """
     Renvoie une matrice de taille nxm avec des nombres entiers aléatoires compris entre n_min et n_max (inclus)
@@ -410,16 +517,37 @@ def create_random_matrice(n: int, m: int, nb_min: int = 1, nb_max: int = 9) -> M
 
 
 if __name__ == "__main__":
-    matrice = Matrice([[-1, 2], [3, 4]])
-    matrice2 = Matrice([[1.5, 6, 1], [3, 6, 9], [1, 1, 1]])
+    matrice2 = Matrice([[-1, 2], [3, 4]])
+    matrice3 = Matrice([[1.5, 6, 1], [3, 6, 9], [1, 1, 1]])
     diag = Matrice([[5, 0, 0], [0, Fraction(1, 6), 0], [0, 0, 22]])
-    matrice10 = Matrice([[6, 0, 7, 6, 1, 9, 5, 9, 8, 3], [3, 0, 2, 1, 6, 3, 2, 1, 3, 12], [3, 0, 7, 9, 14, 3, 2, 1, 3, 9], [3, 0, 5, 7, 7, 7, 4, 5, 3, 3], [3, 0, 6, 4, 4, 9, 2, 3, 8, 1], [145, 0, 4, 7, 3, 9, 3, 3, 6, 3], [3, 0, 2, 5, 3, 5, 6, 2, 8, 3], [3, 0, 9, 7, 9, 2, 3, 7, 6, 3], [11, 0, 6, 4, 9, 8, 4, 4, 6, 3], [0, 0, 22, 7, 3, 7, 2, 9, 8, 46]])
+    matrice10 = Matrice(
+        [
+            [6, 0, 7, 6, 1, 9, 5, 9, 8, 3],
+            [3, 6, 2, 1, 6, 3, 2, 1, 3, 1],
+            [3, 0, 7, 0, 1, 0, 2, 1, 3, 9],
+            [3, 0, 5, 7, 7, 7, 4, 5, 3, 3],
+            [3, 0, 6, 4, 4, 9, 2, 3, 8, 1],
+            [1, 0, 4, 7, 3, 9, 3, 3, 6, 3],
+            [3, 0, 2, 5, 3, 5, 6, 2, 8, 3],
+            [3, 0, 9, 7, 9, 2, 3, 7, 6, 3],
+            [1, 0, 6, 4, 9, 8, 4, 4, 6, 3],
+            [0, 0, 2, 7, 0, 0, 2, 9, 8, 4]
+        ]
+    )
+    matrice10_2 = Matrice(
+        [
+            [6, 4, 7, 6, 1, 2, 5, 9, 8, 3],
+            [3, 6, 2, 1, 2, 4, 2, 1, 3, 1],
+            [3, 0, 7, 0, 3, 0, 2, 1, 3, 9],
+            [3, 1, 5, 7, 4, 8, 4, 5, 3, 3],
+            [3, 0, 6, 4, 0, 0, 2, 3, 8, 1],
+            [3, 9, 9, 7, 8, 16, 3, 7, 6, 3],
+            [1, 0, 6, 4, 9, 18, 4, 4, 6, 3],
+            [0, 0, 2, 7, 10, 20, 2, 9, 8, 4],
+            [1, 7, 4, 7, 6, 12, 3, 3, 6, 3],
+            [3, 21, 12, 21, 18, 36, 9, 9, 18, 9],
+        ]
+    )
     troll = create_random_matrice(3, 3)
     trolll = create_random_matrice(3, 3)
     idd = create_id_matrice(3)
-    print(matrice10.det())
-    # print(troll*idd == troll)
-    # print(matrice2.det())
-    # print(1/matrice2)
-    # print(matrice**-1)
-    # print(matrice)
